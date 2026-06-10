@@ -104,6 +104,12 @@ function randomBetween(min, max) {
   return min + Math.random() * (max - min);
 }
 
+// Stable pseudo-random values keep procedural scenery from flickering each frame.
+function sceneryNoise(index, salt = 0) {
+  const value = Math.sin(index * 127.1 + salt * 311.7) * 43758.5453;
+  return value - Math.floor(value);
+}
+
 function setStatus(message, duration = 1.6) {
   state.statusMessage = message;
   state.statusTimer = duration;
@@ -379,12 +385,27 @@ function drawLine(x1, y1, x2, y2, color, lineWidth = 1, alpha = 1) {
 }
 
 function drawBackground() {
-  const gradient = ctx.createRadialGradient(width * 0.56, height * 0.35, 20, width * 0.5, height * 0.35, width * 0.75);
-  gradient.addColorStop(0, "#071410");
-  gradient.addColorStop(0.45, "#020706");
+  const gradient = ctx.createRadialGradient(width * 0.64, height * 0.3, 20, width * 0.5, height * 0.35, width * 0.75);
+  gradient.addColorStop(0, "#071715");
+  gradient.addColorStop(0.34, "#030b0a");
+  gradient.addColorStop(0.68, "#010504");
   gradient.addColorStop(1, "#000101");
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, width, height);
+
+  const earthGlow = ctx.createRadialGradient(
+    width * 0.67,
+    height * 0.31,
+    0,
+    width * 0.67,
+    height * 0.31,
+    Math.min(width, height) * 0.36,
+  );
+  earthGlow.addColorStop(0, "rgba(62, 138, 170, 0.1)");
+  earthGlow.addColorStop(0.5, "rgba(23, 65, 65, 0.035)");
+  earthGlow.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.fillStyle = earthGlow;
+  ctx.fillRect(0, 0, width, height * 0.72);
 
   for (const star of stars) {
     const flicker = 0.72 + Math.sin(elapsed * 1.5 + star.pulse) * 0.28;
@@ -393,94 +414,317 @@ function drawBackground() {
   }
 }
 
+function drawEarthLandmass(x, y, radius, points, color) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  points.forEach(([pointX, pointY], index) => {
+    const px = x + pointX * radius;
+    const py = y + pointY * radius;
+    if (index === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  });
+  ctx.closePath();
+  ctx.fill();
+}
+
 function drawEarth() {
-  const radius = Math.min(width, height) * 0.17;
+  const radius = Math.min(width, height) * 0.19;
   const x = width * 0.67;
-  const y = height * 0.32;
+  const y = height * 0.315;
 
   ctx.save();
-  ctx.shadowColor = "#5da8d9";
-  ctx.shadowBlur = 28;
-  const ocean = ctx.createRadialGradient(x - radius * 0.35, y - radius * 0.38, radius * 0.08, x, y, radius);
-  ocean.addColorStop(0, "#b8d6df");
-  ocean.addColorStop(0.18, "#4b8291");
-  ocean.addColorStop(0.55, "#204c62");
-  ocean.addColorStop(0.88, "#102a3b");
-  ocean.addColorStop(1, "#02090e");
+  ctx.shadowColor = "#71b9e1";
+  ctx.shadowBlur = 42;
+  ctx.strokeStyle = "rgba(124, 197, 230, 0.22)";
+  ctx.lineWidth = radius * 0.075;
+  ctx.beginPath();
+  ctx.arc(x, y, radius * 1.015, 0, Math.PI * 2);
+  ctx.stroke();
+
+  const ocean = ctx.createRadialGradient(x - radius * 0.48, y - radius * 0.46, radius * 0.03, x + radius * 0.12, y + radius * 0.12, radius * 1.14);
+  ocean.addColorStop(0, "#e0eff0");
+  ocean.addColorStop(0.1, "#86b9c3");
+  ocean.addColorStop(0.3, "#356e82");
+  ocean.addColorStop(0.62, "#173e58");
+  ocean.addColorStop(0.86, "#071c2b");
+  ocean.addColorStop(1, "#01060a");
   ctx.fillStyle = ocean;
   ctx.beginPath();
   ctx.arc(x, y, radius, 0, Math.PI * 2);
   ctx.fill();
   ctx.clip();
 
-  ctx.globalAlpha = 0.4;
-  ctx.fillStyle = "#aebf9d";
-  for (let i = 0; i < 14; i += 1) {
-    const angle = i * 2.15;
-    const blobX = x + Math.sin(angle) * radius * (0.22 + (i % 5) * 0.1);
-    const blobY = y + Math.cos(angle * 1.3) * radius * (0.18 + (i % 4) * 0.11);
+  drawEarthLandmass(x, y, radius, [
+    [-0.62, -0.34], [-0.39, -0.55], [-0.11, -0.57], [0.08, -0.4],
+    [0.34, -0.34], [0.54, -0.12], [0.4, 0.02], [0.15, -0.02],
+    [-0.04, 0.15], [-0.28, 0.1], [-0.5, -0.08],
+  ], "rgba(143, 151, 118, 0.72)");
+  drawEarthLandmass(x, y, radius, [
+    [-0.18, 0.06], [0.04, 0.13], [0.18, 0.37], [0.06, 0.68],
+    [-0.14, 0.54], [-0.3, 0.25],
+  ], "rgba(132, 141, 106, 0.68)");
+  drawEarthLandmass(x, y, radius, [
+    [0.5, 0.2], [0.67, 0.28], [0.61, 0.47], [0.43, 0.4],
+  ], "rgba(151, 145, 110, 0.58)");
+
+  ctx.fillStyle = "rgba(209, 222, 209, 0.18)";
+  for (let i = 0; i < 38; i += 1) {
+    const angle = i * 2.17;
+    const distance = radius * (0.12 + sceneryNoise(i, 2) * 0.78);
+    const blobX = x + Math.sin(angle) * distance;
+    const blobY = y + Math.cos(angle * 1.29) * distance * 0.84;
     ctx.beginPath();
-    ctx.ellipse(blobX, blobY, radius * (0.09 + (i % 4) * 0.038), radius * (0.035 + (i % 3) * 0.022), angle, 0, Math.PI * 2);
+    ctx.ellipse(
+      blobX,
+      blobY,
+      radius * (0.012 + sceneryNoise(i, 4) * 0.038),
+      radius * (0.008 + sceneryNoise(i, 7) * 0.022),
+      angle,
+      0,
+      Math.PI * 2,
+    );
     ctx.fill();
   }
 
-  ctx.strokeStyle = "rgba(210, 240, 245, 0.24)";
-  ctx.lineWidth = radius * 0.035;
-  for (let i = 0; i < 8; i += 1) {
+  ctx.strokeStyle = "rgba(238, 249, 244, 0.4)";
+  ctx.lineCap = "round";
+  for (let i = 0; i < 18; i += 1) {
+    const cloudX = x - radius * 0.72 + sceneryNoise(i, 61) * radius * 1.35;
+    const cloudY = y - radius * 0.72 + sceneryNoise(i, 64) * radius * 1.38;
+    const cloudLength = radius * (0.18 + sceneryNoise(i, 67) * 0.48);
+    const curl = (sceneryNoise(i, 70) - 0.5) * radius * 0.3;
+    ctx.lineWidth = radius * (0.012 + sceneryNoise(i, 73) * 0.018);
     ctx.beginPath();
-    ctx.arc(
-      x + Math.sin(i * 2.8) * radius * 0.34,
-      y + Math.cos(i * 1.9) * radius * 0.42,
-      radius * (0.28 + (i % 4) * 0.11),
-      0.2,
-      2.6,
+    ctx.moveTo(cloudX - cloudLength * 0.5, cloudY);
+    ctx.bezierCurveTo(
+      cloudX - cloudLength * 0.18,
+      cloudY - curl,
+      cloudX + cloudLength * 0.2,
+      cloudY + curl,
+      cloudX + cloudLength * 0.5,
+      cloudY + curl * 0.15,
     );
     ctx.stroke();
+  }
+
+  const nightShade = ctx.createLinearGradient(x - radius * 0.6, y - radius * 0.5, x + radius, y + radius * 0.55);
+  nightShade.addColorStop(0, "rgba(0, 5, 8, 0)");
+  nightShade.addColorStop(0.5, "rgba(0, 5, 10, 0.1)");
+  nightShade.addColorStop(0.74, "rgba(0, 3, 8, 0.62)");
+  nightShade.addColorStop(1, "rgba(0, 1, 4, 0.93)");
+  ctx.fillStyle = nightShade;
+  ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
+
+  ctx.fillStyle = "rgba(255, 213, 128, 0.7)";
+  ctx.shadowColor = "#ffc66e";
+  ctx.shadowBlur = 5;
+  for (let i = 0; i < 23; i += 1) {
+    const lightX = x + radius * (0.15 + sceneryNoise(i, 9) * 0.68);
+    const lightY = y + radius * (-0.45 + sceneryNoise(i, 12) * 0.94);
+    if (Math.hypot(lightX - x, lightY - y) < radius * 0.9) {
+      ctx.fillRect(lightX, lightY, 0.7 + sceneryNoise(i, 15) * 1.4, 0.7);
+    }
+  }
+  ctx.restore();
+
+  ctx.save();
+  ctx.strokeStyle = "rgba(184, 228, 243, 0.72)";
+  ctx.shadowColor = "#89d4f1";
+  ctx.shadowBlur = 14;
+  ctx.lineWidth = Math.max(1.2, radius * 0.012);
+  ctx.beginPath();
+  ctx.arc(x, y, radius * 1.006, Math.PI * 0.72, Math.PI * 1.82);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawMountainLayer(points, color, highlight, baseY) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(0, height);
+  ctx.lineTo(0, height * points[0][1]);
+  points.forEach(([pointX, pointY]) => ctx.lineTo(width * pointX, height * pointY));
+  ctx.lineTo(width, height);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = highlight;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  points.forEach(([pointX, pointY], index) => {
+    if (index === 0) ctx.moveTo(width * pointX, height * pointY);
+    else ctx.lineTo(width * pointX, height * pointY);
+  });
+  ctx.stroke();
+
+  const shade = ctx.createLinearGradient(0, height * points[0][1], 0, height * baseY);
+  shade.addColorStop(0, "rgba(255, 255, 255, 0.035)");
+  shade.addColorStop(1, "rgba(0, 0, 0, 0.1)");
+  ctx.fillStyle = shade;
+  ctx.fillRect(0, height * points[0][1], width, height * (baseY - points[0][1]));
+}
+
+function drawLunarOutposts() {
+  const groundY = height * 0.665;
+  const green = "rgba(132, 255, 135, 0.55)";
+
+  ctx.save();
+  ctx.fillStyle = "#101614";
+  ctx.strokeStyle = "rgba(180, 195, 188, 0.28)";
+  ctx.lineWidth = 1;
+
+  const leftX = width * 0.17;
+  ctx.fillRect(leftX - width * 0.085, groundY - height * 0.035, width * 0.17, height * 0.045);
+  ctx.beginPath();
+  ctx.moveTo(leftX - width * 0.07, groundY - height * 0.035);
+  ctx.lineTo(leftX - width * 0.045, groundY - height * 0.085);
+  ctx.lineTo(leftX + width * 0.04, groundY - height * 0.085);
+  ctx.lineTo(leftX + width * 0.075, groundY - height * 0.035);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillRect(leftX - 3, groundY - height * 0.25, 6, height * 0.17);
+  for (let i = 0; i < 6; i += 1) {
+    const towerY = groundY - height * (0.1 + i * 0.025);
+    drawLine(leftX - 18 + i * 2, towerY, leftX + 18 - i * 2, towerY, "#82908a", 1, 0.34);
+  }
+  ctx.beginPath();
+  ctx.ellipse(leftX + width * 0.035, groundY - height * 0.105, width * 0.035, height * 0.012, -0.22, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  drawLine(leftX + width * 0.035, groundY - height * 0.105, leftX + width * 0.06, groundY - height * 0.16, "#aab7b1", 1, 0.45);
+
+  const rightX = width * 0.89;
+  ctx.fillRect(rightX - width * 0.045, groundY - height * 0.19, width * 0.09, height * 0.2);
+  ctx.fillRect(rightX - width * 0.072, groundY - height * 0.125, width * 0.145, height * 0.135);
+  ctx.strokeRect(rightX - width * 0.072, groundY - height * 0.125, width * 0.145, height * 0.135);
+  ctx.beginPath();
+  ctx.moveTo(rightX - width * 0.045, groundY - height * 0.19);
+  ctx.lineTo(rightX, groundY - height * 0.245);
+  ctx.lineTo(rightX + width * 0.045, groundY - height * 0.19);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.strokeStyle = "rgba(175, 194, 185, 0.24)";
+  for (let i = 0; i < 5; i += 1) {
+    const braceX = rightX - width * 0.065 + i * width * 0.032;
+    drawLine(braceX, groundY, braceX + width * 0.025, groundY - height * 0.12, "#9eaaa4", 1, 0.2);
+    drawLine(braceX, groundY - height * 0.12, braceX + width * 0.025, groundY, "#9eaaa4", 1, 0.14);
+  }
+  ctx.fillStyle = "#090e0d";
+  ctx.fillRect(rightX - width * 0.092, groundY - height * 0.06, width * 0.02, height * 0.07);
+  ctx.fillRect(rightX + width * 0.072, groundY - height * 0.07, width * 0.018, height * 0.08);
+
+  ctx.strokeStyle = "rgba(161, 180, 171, 0.3)";
+  ctx.beginPath();
+  ctx.arc(rightX, groundY - height * 0.245, width * 0.035, Math.PI, Math.PI * 2);
+  ctx.stroke();
+  drawLine(rightX, groundY - height * 0.245, rightX + width * 0.024, groundY - height * 0.285, "#a8b5ae", 1, 0.4);
+
+  for (let i = 0; i < 4; i += 1) {
+    ctx.fillStyle = "rgba(185, 216, 211, 0.42)";
+    ctx.fillRect(rightX - width * 0.055 + i * width * 0.034, groundY - height * 0.105, width * 0.018, height * 0.018);
+  }
+
+  ctx.fillStyle = green;
+  ctx.shadowColor = "#76ff82";
+  ctx.shadowBlur = 8;
+  ctx.fillRect(leftX - 1.5, groundY - height * 0.252, 3, 3);
+  ctx.fillRect(rightX - 2, groundY - height * 0.247, 4, 4);
+  ctx.fillRect(rightX + width * 0.023, groundY - height * 0.287, 3, 3);
+  for (let i = 0; i < 5; i += 1) {
+    ctx.fillRect(leftX - width * 0.06 + i * width * 0.025, groundY - height * 0.04, 3, 2);
   }
   ctx.restore();
 }
 
 function drawMoonSurface() {
-  const horizonY = height * 0.67;
-  const terrain = [
-    [0, 0.7], [0.08, 0.63], [0.17, 0.69], [0.26, 0.61], [0.35, 0.67],
-    [0.44, 0.64], [0.53, 0.68], [0.62, 0.62], [0.71, 0.69], [0.8, 0.61],
-    [0.9, 0.66], [1, 0.62],
+  const farMountains = [
+    [0, 0.665], [0.07, 0.61], [0.13, 0.647], [0.2, 0.592], [0.27, 0.65],
+    [0.35, 0.605], [0.43, 0.654], [0.51, 0.596], [0.59, 0.645], [0.67, 0.59],
+    [0.74, 0.65], [0.83, 0.602], [0.91, 0.646], [1, 0.584],
   ];
-  const ground = ctx.createLinearGradient(0, horizonY, 0, height);
-  ground.addColorStop(0, "#2e3432");
-  ground.addColorStop(0.35, "#151b19");
-  ground.addColorStop(1, "#050806");
+  const nearRidges = [
+    [0, 0.705], [0.06, 0.665], [0.12, 0.69], [0.19, 0.642], [0.25, 0.691],
+    [0.32, 0.658], [0.39, 0.704], [0.47, 0.654], [0.55, 0.695], [0.63, 0.648],
+    [0.7, 0.696], [0.78, 0.648], [0.85, 0.701], [0.93, 0.65], [1, 0.676],
+  ];
+
+  drawMountainLayer(farMountains, "#141b1a", "rgba(181, 202, 194, 0.22)", 0.72);
+  drawLunarOutposts();
+  drawMountainLayer(nearRidges, "#252c2a", "rgba(211, 224, 217, 0.28)", 0.76);
+
+  const ground = ctx.createLinearGradient(0, height * 0.66, 0, height);
+  ground.addColorStop(0, "#3b403e");
+  ground.addColorStop(0.2, "#292f2d");
+  ground.addColorStop(0.55, "#141a18");
+  ground.addColorStop(1, "#040706");
   ctx.fillStyle = ground;
   ctx.beginPath();
-  ctx.moveTo(0, height);
-  ctx.lineTo(0, height * terrain[0][1]);
-  terrain.forEach(([x, y]) => ctx.lineTo(width * x, height * y));
+  ctx.moveTo(0, height * 0.715);
+  ctx.bezierCurveTo(width * 0.24, height * 0.68, width * 0.42, height * 0.73, width * 0.61, height * 0.695);
+  ctx.bezierCurveTo(width * 0.76, height * 0.665, width * 0.9, height * 0.72, width, height * 0.685);
   ctx.lineTo(width, height);
+  ctx.lineTo(0, height);
   ctx.closePath();
   ctx.fill();
 
-  ctx.strokeStyle = "rgba(183, 199, 188, 0.18)";
-  ctx.lineWidth = 1;
   for (let i = 0; i < 18; i += 1) {
-    const y = horizonY + i * i * 1.1;
+    const depth = i / 17;
+    const y = height * (0.71 + depth * depth * 0.28);
+    const bend = Math.sin(i * 1.8) * height * 0.012 * depth;
+    ctx.strokeStyle = `rgba(198, 211, 205, ${0.08 + depth * 0.07})`;
+    ctx.lineWidth = 0.7 + depth * 0.8;
     ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.quadraticCurveTo(width * 0.5, y - 10 + i, width, y + Math.sin(i) * 6);
+    ctx.moveTo(0, y + bend);
+    ctx.bezierCurveTo(width * 0.28, y - bend, width * 0.68, y + bend, width, y - bend * 0.4);
     ctx.stroke();
   }
 
-  for (let i = 0; i < 22; i += 1) {
-    const craterX = ((i * 193) % 997) / 997 * width;
-    const craterY = height * (0.69 + (((i * 67) % 100) / 100) * 0.25);
-    const craterSize = 4 + (((i * 41) % 70) / 70) * 28 * (craterY / height);
-    ctx.fillStyle = "rgba(0, 0, 0, 0.32)";
+  for (let i = 0; i < 34; i += 1) {
+    const craterX = sceneryNoise(i, 21) * width;
+    const craterY = height * (0.71 + sceneryNoise(i, 25) * 0.27);
+    const depth = (craterY / height - 0.71) / 0.27;
+    const craterSize = 3 + sceneryNoise(i, 29) * (11 + depth * 34);
+    const rotation = (sceneryNoise(i, 33) - 0.5) * 0.35;
+    const craterShade = ctx.createRadialGradient(craterX - craterSize * 0.4, craterY - craterSize * 0.12, 1, craterX, craterY, craterSize * 1.8);
+    craterShade.addColorStop(0, "rgba(3, 5, 4, 0.62)");
+    craterShade.addColorStop(0.65, "rgba(7, 10, 9, 0.38)");
+    craterShade.addColorStop(1, "rgba(178, 188, 183, 0.12)");
+    ctx.fillStyle = craterShade;
     ctx.beginPath();
-    ctx.ellipse(craterX, craterY, craterSize * 1.8, craterSize * 0.55, 0, 0, Math.PI * 2);
+    ctx.ellipse(craterX, craterY, craterSize * 1.8, craterSize * (0.3 + depth * 0.18), rotation, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = "rgba(175, 190, 182, 0.12)";
+    ctx.strokeStyle = `rgba(205, 216, 210, ${0.08 + depth * 0.1})`;
+    ctx.lineWidth = 0.7;
     ctx.stroke();
   }
+
+  for (let i = 0; i < 38; i += 1) {
+    const rockX = sceneryNoise(i, 42) * width;
+    const rockY = height * (0.7 + sceneryNoise(i, 47) * 0.29);
+    const depth = (rockY / height - 0.7) / 0.29;
+    const rockSize = 1.5 + sceneryNoise(i, 51) * (3 + depth * 12);
+    ctx.fillStyle = `rgba(62, 70, 67, ${0.45 + depth * 0.3})`;
+    ctx.beginPath();
+    ctx.moveTo(rockX - rockSize, rockY);
+    ctx.lineTo(rockX - rockSize * 0.25, rockY - rockSize * 0.75);
+    ctx.lineTo(rockX + rockSize * 0.65, rockY - rockSize * 0.25);
+    ctx.lineTo(rockX + rockSize, rockY);
+    ctx.closePath();
+    ctx.fill();
+    drawLine(rockX - rockSize * 0.2, rockY - rockSize * 0.65, rockX + rockSize * 0.55, rockY - rockSize * 0.2, "#c0cbc5", 0.7, 0.18);
+  }
+
+  ctx.strokeStyle = "rgba(83, 255, 113, 0.14)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(width * 0.29, height);
+  ctx.lineTo(width * 0.43, height * 0.72);
+  ctx.moveTo(width * 0.71, height);
+  ctx.lineTo(width * 0.58, height * 0.715);
+  ctx.stroke();
 }
 
 function drawWeapon() {
