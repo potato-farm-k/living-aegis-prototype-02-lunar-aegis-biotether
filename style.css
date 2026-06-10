@@ -1,0 +1,181 @@
+:root {
+  color-scheme: dark;
+  font-family: "Courier New", Courier, monospace;
+  background: #010302;
+  color: #a6ff9a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 35%, #0a1713 0%, #020604 42%, #000 100%);
+}
+
+button {
+  font: inherit;
+}
+
+.simulation-shell {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  min-height: 420px;
+  overflow: hidden;
+  cursor: crosshair;
+  user-select: none;
+}
+
+#gameCanvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+.corner-controls {
+  position: absolute;
+  z-index: 3;
+  right: 18px;
+  bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(164, 255, 150, 0.65);
+  font-size: clamp(8px, 0.72vw, 11px);
+  letter-spacing: 0.07em;
+  pointer-events: none;
+}
+
+.corner-controls span,
+.corner-controls button {
+  padding: 5px 7px;
+  border: 1px solid rgba(126, 255, 112, 0.18);
+  background: rgba(2, 12, 8, 0.54);
+}
+
+.corner-controls b {
+  color: #d5ffd0;
+}
+
+.corner-controls button {
+  color: #a6ff9a;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.corner-controls button:hover {
+  border-color: rgba(145, 255, 128, 0.7);
+  background: rgba(20, 60, 35, 0.72);
+}
+
+.start-card {
+  position: absolute;
+  z-index: 4;
+  top: 50%;
+  left: 50%;
+  width: min(520px, calc(100vw - 40px));
+  padding: 28px 32px 24px;
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(141, 255, 121, 0.48);
+  border-top: 3px solid rgba(175, 255, 158, 0.8);
+  background:
+    linear-gradient(135deg, rgba(14, 42, 27, 0.94), rgba(2, 9, 6, 0.92)),
+    repeating-linear-gradient(0deg, transparent 0 3px, rgba(130, 255, 116, 0.04) 3px 4px);
+  box-shadow:
+    0 0 45px rgba(80, 255, 100, 0.12),
+    inset 0 0 30px rgba(60, 255, 100, 0.05);
+  text-align: center;
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.start-card::before,
+.start-card::after {
+  position: absolute;
+  top: -7px;
+  width: 72px;
+  height: 12px;
+  border-top: 1px solid #a6ff9a;
+  content: "";
+}
+
+.start-card::before {
+  left: -18px;
+  transform: rotate(-18deg);
+}
+
+.start-card::after {
+  right: -18px;
+  transform: rotate(18deg);
+}
+
+.start-card.hidden {
+  opacity: 0;
+  transform: translate(-50%, -47%) scale(0.98);
+  pointer-events: none;
+}
+
+.start-card .eyebrow {
+  margin: 0 0 10px;
+  color: rgba(172, 255, 157, 0.65);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+}
+
+.start-card h1 {
+  margin: 0;
+  color: #d1ffca;
+  font-size: clamp(30px, 5vw, 56px);
+  font-weight: 400;
+  line-height: 0.92;
+  letter-spacing: 0.08em;
+  text-shadow: 0 0 20px rgba(112, 255, 103, 0.35);
+}
+
+.start-card p:not(.eyebrow) {
+  margin: 22px 0;
+  color: rgba(205, 255, 198, 0.72);
+  font-family: system-ui, sans-serif;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.start-card button {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid rgba(166, 255, 154, 0.7);
+  background: rgba(67, 173, 72, 0.18);
+  color: #d7ffd2;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+}
+
+.start-card button:hover {
+  background: rgba(91, 215, 94, 0.28);
+  box-shadow: inset 0 0 18px rgba(121, 255, 116, 0.12);
+}
+
+.start-card small {
+  display: block;
+  margin-top: 12px;
+  color: rgba(173, 255, 162, 0.48);
+  font-family: system-ui, sans-serif;
+  font-size: 10px;
+}
+
+@media (max-width: 820px) {
+  .corner-controls span {
+    display: none;
+  }
+
+  .start-card {
+    padding: 24px 22px 20px;
+  }
+}
